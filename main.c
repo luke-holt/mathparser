@@ -1,7 +1,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdint.h>
+#include <math.h>
 
 #include "dynamic_array.h"
 #include "util.h"
@@ -12,14 +12,16 @@ typedef enum {
 } TokenType;
 
 typedef struct {
-    uint16_t pos;
+    size_t pos;
     TokenType type;
     int value;
 } Token;
 
 static void tokenize(void);
+static void print_tokens(void);
 static void parse_tokens(void);
 static void print_tokens_in_rpn(void);
+static int evaluate_tokens_in_rpn(void);
 
 static inline bool is_digit(char c) { return BETWEEN(c, '0', '9'); }
 
@@ -28,7 +30,7 @@ const char *tokentypenames[] = {
     "(", ")", "NUM", "WHITESPACE",
 };
 
-const uint8_t operator_precedence[] = {
+const uint operator_precedence[] = {
     [ADD] = 0,
     [SUB] = 0,
     [MUL] = 1,
@@ -39,7 +41,7 @@ const uint8_t operator_precedence[] = {
 };
 
 Token *tokens;
-uint16_t *parsed_token_indices;
+size_t *parsed_token_indices;
 size_t parsed_token_indices_len;
 char *input;
 
@@ -54,11 +56,17 @@ main(int argc, char *argv[])
     da_create(tokens, sizeof(Token), 16);
     tokenize();
 
-    parsed_token_indices = emalloc(sizeof(*parsed_token_indices) * da_len(tokens));
+    print_tokens();
+
+    parsed_token_indices = ecalloc(da_len(tokens), sizeof(*parsed_token_indices));
 
     parse_tokens();
 
     print_tokens_in_rpn();
+
+    int res;
+    res = evaluate_tokens_in_rpn();
+    printf("result: %i\n", res);
 
     free(parsed_token_indices);
     da_destroy(tokens);
@@ -118,21 +126,38 @@ tokenize(void)
 }
 
 void
+print_tokens(void)
+{
+    size_t len;
+    len = da_len(tokens);
+
+    printf("tokens: ");
+    for (size_t i = 0; i < len; i++) {
+        Token *t;
+        t = &tokens[i];
+        if (t->type == NUM) printf("%i ", t->value);
+        else if (t->type == WHITESPACE) /* nop */;
+        else printf("%s ", tokentypenames[t->type]);
+    }
+    fputc('\n', stdout);
+}
+
+void
 parse_tokens(void)
 {
-    uint16_t *stack, *output;
+    size_t *stack, *output;
     size_t si, oi, len;
 
     len = da_len(tokens);
-    stack = emalloc(sizeof(*stack) * len);
+    stack = ecalloc(len, sizeof(*stack));
     output = parsed_token_indices;
 
     si = oi = 0;
 
-    for (uint16_t i = 0; i < da_len(tokens); i++) {
+    for (size_t i = 0; i < da_len(tokens); i++) {
         TokenType type, stack_head_type;
-        uint16_t o1, o2;
-        uint8_t op1, op2;
+        size_t o1, o2;
+        uint op1, op2;
 
         type = tokens[i].type;
 
@@ -186,6 +211,7 @@ parse_tokens(void)
 void
 print_tokens_in_rpn(void)
 {
+    printf("rpn: ");
     for (size_t i = 0; i < parsed_token_indices_len; i++) {
         Token *t;
         t = &tokens[parsed_token_indices[i]];
@@ -196,3 +222,42 @@ print_tokens_in_rpn(void)
     fputc('\n', stdout);
 }
 
+int
+evaluate_tokens_in_rpn(void)
+{
+    int *stack, out;
+    size_t si;
+
+    stack = ecalloc(parsed_token_indices_len, sizeof(*stack));
+
+    si = 0;
+    for (int i = 0; i < parsed_token_indices_len; i++) {
+        Token *t;
+        t = &tokens[parsed_token_indices[i]];
+        if (t->type == ADD || t->type == SUB || t->type == MUL || t->type == DIV || t->type == POW) {
+            int a, b;
+            a = stack[--si];
+            b = stack[--si];
+            if (t->type == ADD)
+                stack[si++] = b + a;
+            else if (t->type == SUB)
+                stack[si++] = b - a;
+            else if (t->type == MUL)
+                stack[si++] = b * a;
+            else if (t->type == DIV)
+                stack[si++] = b / a;
+            else if (t->type == POW)
+                stack[si++] = pow(b, a);
+        }
+        else stack[si++] = t->value;
+    }
+
+    if (si > 1)
+        die("E: Too many items in stack after RPN evaluation algorithm");
+
+    out = stack[0];
+
+    free(stack);
+
+    return out;
+}
