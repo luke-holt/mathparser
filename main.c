@@ -185,12 +185,15 @@ parse_tokens(void)
             break;
         // right parenthesis
         case RPAREN:
-            while ((si > 0) && (tokens[stack[si-1]].type != LPAREN))
+            while ((si > 0) && (tokens[stack[si-1]].type != LPAREN)) {
                 output[oi++] = stack[--si];
-            if ((si > 0) && (tokens[stack[si-1]].type == LPAREN))
-                si--;
-            if ((si > 0) && BETWEEN(tokens[stack[si-1]].type, ADD, POW))
-                output[oi++] = stack[--si];
+                if (si == 0)
+                    die("E: mismatched parens");
+            }
+            if (tokens[stack[si-1]].type != LPAREN)
+                die("E: mismatched parens");
+            si--;
+            // if stack head is function, pop into output queue
             break;
         default:
             die("E: unknown token `%u`", type);
