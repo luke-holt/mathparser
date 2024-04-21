@@ -175,7 +175,7 @@ parse_tokens(void)
             op1 = operator_precedence[type];
             while ((si > 0) // operator on stack
                     && (tokens[stack[si-1]].type != LPAREN) // stack head not left parenthesis
-                    && (operator_precedence[stack[si-1]] >= op1)) // stack head precedence greater or eq than op1
+                    && (operator_precedence[tokens[stack[si-1]].type] >= op1)) // stack head precedence greater or eq than op1
                 output[oi++] = stack[--si];
             stack[si++] = i;
             break;
