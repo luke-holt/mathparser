@@ -109,7 +109,7 @@ tokenize(void)
             while (is_digit(str[i]) && numstr_i < sizeof(numstr))
                 numstr[numstr_i++] = str[i++];
             if (numstr_i == sizeof(numstr))
-                die("E: Why do you have a number longer than 32 characters?");
+                die("E: why do you have an integer longer than 32 characters?");
             numstr[numstr_i] = '\0';
             t.type = NUM;
             t.value = atoi(numstr);
@@ -188,15 +188,15 @@ parse_tokens(void)
             while ((si > 0) && (tokens[stack[si-1]].type != LPAREN)) {
                 output[oi++] = stack[--si];
                 if (si == 0)
-                    die("E: mismatched parens");
+                    die("E: mismatched parenthesis");
             }
             if (tokens[stack[si-1]].type != LPAREN)
-                die("E: mismatched parens");
+                die("E: mismatched parenthesis");
             si--;
             // if stack head is function, pop into output queue
             break;
         default:
-            die("E: unknown token `%u`", type);
+            die("E: unknown character `%u`", type);
             break;
         }
     }
@@ -238,6 +238,8 @@ evaluate_tokens_in_rpn(void)
         Token *t;
         t = &tokens[parsed_token_indices[i]];
         if (t->type == ADD || t->type == SUB || t->type == MUL || t->type == DIV || t->type == POW) {
+            if (si < 2)
+                die("E: missing number to compute `%s`", tokentypenames[t->type]);
             int a, b;
             a = stack[--si];
             b = stack[--si];
@@ -247,8 +249,11 @@ evaluate_tokens_in_rpn(void)
                 stack[si++] = b - a;
             else if (t->type == MUL)
                 stack[si++] = b * a;
-            else if (t->type == DIV)
+            else if (t->type == DIV) {
+                if (a == 0)
+                    die("E: division by zero");
                 stack[si++] = b / a;
+            }
             else if (t->type == POW)
                 stack[si++] = pow(b, a);
         }
@@ -256,7 +261,7 @@ evaluate_tokens_in_rpn(void)
     }
 
     if (si > 1)
-        die("E: Too many items in stack after RPN evaluation algorithm");
+        die("E: too many items in stack after RPN evaluation algorithm");
 
     out = stack[0];
 
@@ -264,3 +269,4 @@ evaluate_tokens_in_rpn(void)
 
     return out;
 }
+
