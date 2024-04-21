@@ -49,7 +49,7 @@ int
 main(int argc, char *argv[])
 {
     if (argc != 2)
-        die("usage: %s <expr>", argv[0]);
+        die("usage: %s <expr>\nsupported operations: [ +, -, *, /, ** ]", argv[0]);
 
     input = argv[1];
 

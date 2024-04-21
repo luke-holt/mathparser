@@ -8,6 +8,7 @@ Convert a math expression to it's equivalent in Reverse Polish Notation (RPN).
 ```
 $ ./parsemath
 usage: ./parsemath <expr>
+supported operations: [ +, -, *, /, ** ]
 $ ./parsemath "1 + 1"
 tokens: 1 + 1
 rpn: 1 1 +
